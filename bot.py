@@ -80,18 +80,18 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "main_menu":
         await start(update, context)
 
-# Render-এর জন্য ছোট্ট একটি ফেক ওয়েব সার্ভার (যাতে Web Service সচল থাকে)
+# Render-এর পোর্ট ঠিক রাখার জন্য সিম্পল ওয়েব সার্ভার
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"Bot is active!")
+    def log_message(self, format, *args):
+        return  # অতিরিক্ত লগ স্প্যাম হওয়া রোধ করতে
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(('0.0.0.0', port), SimpleHandler)
-    server.server_bind()
-    server.activate_serve()
     server.serve_forever()
 
 # মূল রানার ফাংশন
