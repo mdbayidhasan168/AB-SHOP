@@ -1,6 +1,9 @@
 import logging
+import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
 
 # লগিং সেটআপ
 logging.basicConfig(
@@ -8,10 +11,8 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# আপনার বটের টোকেন এখানে বসানো হয়েছে
+# আপনার বটের টোকেন এবং ইউজার আইডি
 BOT_TOKEN = "8811802511:AAEj_hDw9Vga-r1J2lYqbXZrAuDAn6GhR8g"
-
-# আপনার টেলিগ্রাম ইউজার আইডি এখানে সেট করা হলো (অ্যাডমিন কাজের জন্য)
 ADMIN_USER_ID = 7108803747
 
 # নমুনাস্বরূপ কিছু পণ্যের তালিকা
@@ -74,13 +75,33 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "support":
         keyboard = [[InlineKeyboardButton("🔙 প্রধান মেনু", callback_data="main_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text("📩 যেকোনো প্রয়োজনে আমাদের অ্যাডমিন অ্যাকাউন্টে নক দিন।", reply_markup=reply_markup)
+        await query.message.edit_text("📩 যেকোনো প্রয়োজনে আমাদের অ্যাডমিন অ্যাকাউন্টে নক দিন.", reply_markup=reply_markup)
         
     elif query.data == "main_menu":
         await start(update, context)
 
+# Render-এর জন্য ছোট্ট একটি ফেক ওয়েব সার্ভার (যাতে Web Service সচল থাকে)
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is active!")
+
+def run_web_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(('0.0.0.0', port), SimpleHandler)
+    server.server_bind()
+    server.activate_serve()
+    server.serve_forever()
+
 # মূল রানার ফাংশন
 def main():
+    # ব্যাকগ্রাউন্ডে ওয়েব সার্ভার চালু করা
+    server_thread = threading.Thread(target=run_web_server)
+    server_thread.daemon = True
+    server_thread.start()
+
+    # টেলিগ্রাম বট চালু করা
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     
     app.add_handler(CommandHandler("start", start))
